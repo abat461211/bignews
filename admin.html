@@ -450,7 +450,7 @@ async function saveArticle() {
       const idx = NEWS.findIndex(x => x.id === currentId);
       NEWS[idx] = art;
     } else {
-      NEWS.push(art);
+      NEWS.unshift(art);
     }
     await saveNewsFile();
     st.innerHTML = '<span class="ok-text">✓ Збережено!</span>';
