@@ -142,6 +142,17 @@
       </div>
     </div>
 
+    <label>Фото статті (необов'язково)</label>
+    <div class="hint">Завантаж картинку — вона покажеться на картці і вгорі статті. Якщо фото немає, буде емодзі на кольоровому фоні.</div>
+    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <input type="file" id="f-file" accept="image/*" onchange="uploadImage(this.files[0])">
+      <button class="ghost" onclick="removeImage()" id="btn-remove-img" style="display:none">🗑 Прибрати фото</button>
+    </div>
+    <div id="img-preview" style="margin-top:10px; display:none;">
+      <img id="img-preview-el" alt="Фото" style="max-width:260px; border-radius:10px; border:1px solid var(--border); display:block;">
+    </div>
+    <div id="img-status" style="font-size:13px; margin-top:6px;"></div>
+
     <label>Повний текст статті</label>
     <div class="hint">Кожен абзац — з нового рядка. Рядок, що починається з ## — стає підзаголовком.</div>
     <textarea id="f-paragraphs" class="code" placeholder="Перший абзац...
@@ -179,6 +190,7 @@ let TOKEN = localStorage.getItem('bignews_token') || '';
 let NEWS = [];
 let currentId = null;
 let fileSha = null;
+let currentImg = null;
 
 function $(id) { return document.getElementById(id); }
 function toast(msg, ok) {
@@ -232,6 +244,56 @@ async function saveNewsFile() {
   if (fileSha) body.sha = fileSha;
   const res = await gh(`/repos/${REPO}/contents/${FILE}`, { method: 'PUT', body });
   fileSha = res.content.sha;
+}
+
+// ---------- Завантаження фото ----------
+function showImgPreview(path) {
+  const wrap = $('img-preview'), el = $('img-preview-el'), btn = $('btn-remove-img');
+  if (path) {
+    el.src = path; wrap.style.display = 'block'; btn.style.display = 'inline-block';
+  } else {
+    wrap.style.display = 'none'; btn.style.display = 'none';
+  }
+}
+
+async function uploadImage(file) {
+  if (!file) return;
+  const st = $('img-status');
+  if (!/^image\//.test(file.type)) { st.innerHTML = '<span class="err-text">Це не картинка</span>'; return; }
+  if (file.size > 5 * 1024 * 1024) { st.innerHTML = '<span class="err-text">Файл більше 5 МБ — стисни або обери менший</span>'; return; }
+  st.innerHTML = 'Завантажую...';
+  try {
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+    const name = 'img-' + Date.now() + '.' + ext;
+    const b64 = await fileToBase64(file);
+    const body = {
+      message: 'BIGNEWS: додано фото ' + name,
+      content: b64,
+      branch: BRANCH
+    };
+    await gh(`/repos/${REPO}/contents/images/${name}`, { method: 'PUT', body });
+    currentImg = 'images/' + name;
+    showImgPreview(currentImg);
+    st.innerHTML = '<span class="ok-text">✓ Фото завантажено</span>';
+    toast('Фото додано — не забудь зберегти статтю', true);
+  } catch (e) {
+    st.innerHTML = '<span class="err-text">Помилка: ' + e.message + '</span>';
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result.split(',')[1]);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+function removeImage() {
+  currentImg = null;
+  $('img-status').innerHTML = '';
+  showImgPreview(null);
 }
 
 // ---------- Підключення ----------
@@ -292,6 +354,7 @@ function escapeHtml(s) {
 // ---------- Форма ----------
 function newArticle() {
   currentId = null;
+  currentImg = null;
   $('form-title').textContent = 'Нова стаття';
   $('f-title').value = '';
   $('f-text').value = '';
@@ -302,6 +365,9 @@ function newArticle() {
   $('f-quote').value = '';
   $('f-points').value = '';
   $('save-status').textContent = '';
+  $('img-status').textContent = '';
+  $('f-file').value = '';
+  showImgPreview(null);
   $('panel-editor').classList.add('hidden');
   $('panel-form').classList.remove('hidden');
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -311,6 +377,7 @@ function editArticle(id) {
   const n = NEWS.find(x => x.id === id);
   if (!n) return;
   currentId = id;
+  currentImg = n.img || null;
   $('form-title').textContent = 'Редагування: ' + n.title;
   $('f-title').value = n.title;
   $('f-text').value = n.text || '';
@@ -321,6 +388,9 @@ function editArticle(id) {
   $('f-quote').value = n.quote || '';
   $('f-points').value = (n.points || []).join('\n');
   $('save-status').textContent = '';
+  $('img-status').textContent = '';
+  $('f-file').value = '';
+  showImgPreview(currentImg);
   $('panel-editor').classList.add('hidden');
   $('panel-form').classList.remove('hidden');
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -350,6 +420,7 @@ function collectForm() {
     emoji: $('f-emoji').value.trim() || '📰',
     color: color
   };
+  if (currentImg) art.img = currentImg;
   return art;
 }
 
