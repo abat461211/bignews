@@ -98,13 +98,45 @@
   <div class="panel hidden" id="panel-editor">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
       <h2>📰 Статті (<span id="count">0</span>)</h2>
-      <button class="primary" onclick="newArticle()">+ Нова стаття</button>
+      <div style="display:flex; gap:8px;">
+        <button onclick="openSettings()">⚙️ Налаштування</button>
+        <button class="primary" onclick="newArticle()">+ Нова стаття</button>
+      </div>
     </div>
     <div class="hint" style="margin-top:8px">
       Натисни на статтю, щоб редагувати. Після змін — «Зберегти на сайт».
       Оновлення з'явиться на сайті протягом 1–2 хвилин.
     </div>
     <div id="list"></div>
+  </div>
+
+  <!-- КРОК 2.5: налаштування сайту -->
+  <div class="panel hidden" id="panel-settings">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+      <h2>⚙️ Налаштування сайту</h2>
+      <button class="ghost" onclick="closeSettings()">← Назад до статей</button>
+    </div>
+
+    <label>Верхня полоса (текст у шапці сайту)</label>
+    <input type="text" id="s-topbar" placeholder="BIGNEWS • оновлено щойно">
+
+    <label>Червона полоса — напис-ярлик (зліва)</label>
+    <input type="text" id="s-breaking-label" placeholder="🔴 LIVE">
+
+    <label>Червона полоса — текст (порожньо = полосу приховано)</label>
+    <textarea id="s-breaking-text" placeholder="Текст термінової новини"></textarea>
+
+    <label>Велика стаття на головній (заголовок блоку)</label>
+    <input type="text" id="s-hero-title" placeholder="Головне за день">
+
+    <label>Велика стаття на головній (яку статтю показувати великою)</label>
+    <select id="s-hero-id"></select>
+    <div class="hint">Якщо обрати «Автоматично» — показуватиметься найсвіжіша стаття.</div>
+
+    <div style="margin-top:16px; display:flex; gap:8px; align-items:center;">
+      <button class="primary" onclick="saveSettings()">💾 Зберегти налаштування</button>
+      <span id="settings-status"></span>
+    </div>
   </div>
 
   <!-- КРОК 3: форма статті -->
@@ -248,6 +280,82 @@ async function saveNewsFile() {
   if (fileSha) body.sha = fileSha;
   const res = await gh(`/repos/${REPO}/contents/${FILE}`, { method: 'PUT', body });
   fileSha = res.content.sha;
+}
+
+// ---------- Налаштування сайту (config.json) ----------
+async function loadConfigFile() {
+  const data = await gh(`/repos/${REPO}/contents/config.json?ref=${BRANCH}`);
+  const b64 = data.content.replace(/\n/g, '');
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return JSON.parse(new TextDecoder('utf-8').decode(bytes));
+}
+
+async function saveConfigFile(cfg) {
+  const enc = new TextEncoder();
+  const bytes = enc.encode(JSON.stringify(cfg, null, 2));
+  let bin = '';
+  bytes.forEach(b => bin += String.fromCharCode(b));
+  const body = {
+    message: 'BIGNEWS: оновлено налаштування',
+    content: btoa(bin),
+    branch: BRANCH
+  };
+  try {
+    const cur = await gh(`/repos/${REPO}/contents/config.json?ref=${BRANCH}`);
+    body.sha = cur.sha;
+  } catch (e) {}
+  const res = await gh(`/repos/${REPO}/contents/config.json`, { method: 'PUT', body });
+  return res;
+}
+
+function fillHeroSelect(selectedId) {
+  const sel = $('s-hero-id');
+  sel.innerHTML = '<option value="">Автоматично (найсвіжіша)</option>' +
+    NEWS.map(n => `<option value="${n.id}" ${String(n.id) === String(selectedId) ? 'selected' : ''}>#${n.id} ${n.title.slice(0, 60)}</option>`).join('');
+}
+
+async function openSettings() {
+  try {
+    const cfg = await loadConfigFile();
+    $('s-topbar').value = cfg.topbar || '';
+    $('s-breaking-label').value = cfg.breakingLabel || '🔴 LIVE';
+    $('s-breaking-text').value = cfg.breakingText || '';
+    $('s-hero-title').value = cfg.heroTitle || 'Головне за день';
+    fillHeroSelect(cfg.heroId || '');
+    $('settings-status').textContent = '';
+    $('panel-editor').classList.add('hidden');
+    $('panel-settings').classList.remove('hidden');
+  } catch (e) {
+    toast('Помилка завантаження налаштувань: ' + e.message, false);
+  }
+}
+
+function closeSettings() {
+  $('panel-settings').classList.add('hidden');
+  $('panel-editor').classList.remove('hidden');
+}
+
+async function saveSettings() {
+  const st = $('settings-status');
+  st.innerHTML = 'Зберігаю...';
+  try {
+    const heroVal = $('s-hero-id').value;
+    const cfg = {
+      topbar: $('s-topbar').value.trim(),
+      breakingLabel: $('s-breaking-label').value.trim(),
+      breakingText: $('s-breaking-text').value.trim(),
+      heroTitle: $('s-hero-title').value.trim(),
+      heroId: heroVal ? parseInt(heroVal, 10) : null
+    };
+    await saveConfigFile(cfg);
+    st.innerHTML = '<span class="ok-text">✓ Збережено! Оновиться на сайті за 1-2 хв.</span>';
+    toast('Налаштування збережено', true);
+    setTimeout(closeSettings, 1200);
+  } catch (e) {
+    st.innerHTML = '<span class="err-text">Помилка: ' + e.message + '</span>';
+  }
 }
 
 // ---------- Завантаження фото ----------
