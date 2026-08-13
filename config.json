@@ -3,5 +3,6 @@
   "breakingLabel": "🔴 LIVE",
   "breakingText": "Інші новини компанії",
   "heroTitle": "Головне за день",
-  "heroId": 14
+  "heroId": 14,
+  "sideIds": []
 }

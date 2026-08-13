@@ -133,6 +133,16 @@
     <select id="s-hero-id"></select>
     <div class="hint">Якщо обрати «Автоматично» — показуватиметься найсвіжіша стаття.</div>
 
+    <label>Бокові статті (справа від великої, позиції 01–05)</label>
+    <div class="hint">Обери, які статті показувати в боковому списку. «Автоматично» = порожня позиція добирається найсвіжішими.</div>
+    <div class="row">
+      <div><label style="margin-top:4px">01</label><select id="s-side-1"></select></div>
+      <div><label style="margin-top:4px">02</label><select id="s-side-2"></select></div>
+      <div><label style="margin-top:4px">03</label><select id="s-side-3"></select></div>
+      <div><label style="margin-top:4px">04</label><select id="s-side-4"></select></div>
+      <div><label style="margin-top:4px">05</label><select id="s-side-5"></select></div>
+    </div>
+
     <div style="margin-top:16px; display:flex; gap:8px; align-items:center;">
       <button class="primary" onclick="saveSettings()">💾 Зберегти налаштування</button>
       <span id="settings-status"></span>
@@ -310,10 +320,14 @@ async function saveConfigFile(cfg) {
   return res;
 }
 
-function fillHeroSelect(selectedId) {
-  const sel = $('s-hero-id');
-  sel.innerHTML = '<option value="">Автоматично (найсвіжіша)</option>' +
-    NEWS.map(n => `<option value="${n.id}" ${String(n.id) === String(selectedId) ? 'selected' : ''}>#${n.id} ${n.title.slice(0, 60)}</option>`).join('');
+function fillArticleSelect(selId, selectedId, excludeId) {
+  const sel = $(selId);
+  let opts = '<option value="">Автоматично</option>';
+  NEWS.forEach(n => {
+    if (excludeId && n.id === excludeId) return;
+    opts += `<option value="${n.id}" ${String(n.id) === String(selectedId) ? 'selected' : ''}>#${n.id} ${n.title.slice(0, 55)}</option>`;
+  });
+  sel.innerHTML = opts;
 }
 
 async function openSettings() {
@@ -323,7 +337,11 @@ async function openSettings() {
     $('s-breaking-label').value = cfg.breakingLabel || '🔴 LIVE';
     $('s-breaking-text').value = cfg.breakingText || '';
     $('s-hero-title').value = cfg.heroTitle || 'Головне за день';
-    fillHeroSelect(cfg.heroId || '');
+    fillArticleSelect('s-hero-id', cfg.heroId || '');
+    const side = Array.isArray(cfg.sideIds) ? cfg.sideIds : [];
+    for (let i = 1; i <= 5; i++) {
+      fillArticleSelect('s-side-' + i, side[i - 1] || '');
+    }
     $('settings-status').textContent = '';
     $('panel-editor').classList.add('hidden');
     $('panel-settings').classList.remove('hidden');
@@ -342,12 +360,18 @@ async function saveSettings() {
   st.innerHTML = 'Зберігаю...';
   try {
     const heroVal = $('s-hero-id').value;
+    const sideIds = [];
+    for (let i = 1; i <= 5; i++) {
+      const v = $('s-side-' + i).value;
+      sideIds.push(v ? parseInt(v, 10) : null);
+    }
     const cfg = {
       topbar: $('s-topbar').value.trim(),
       breakingLabel: $('s-breaking-label').value.trim(),
       breakingText: $('s-breaking-text').value.trim(),
       heroTitle: $('s-hero-title').value.trim(),
-      heroId: heroVal ? parseInt(heroVal, 10) : null
+      heroId: heroVal ? parseInt(heroVal, 10) : null,
+      sideIds: sideIds
     };
     await saveConfigFile(cfg);
     st.innerHTML = '<span class="ok-text">✓ Збережено! Оновиться на сайті за 1-2 хв.</span>';

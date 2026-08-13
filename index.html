@@ -318,7 +318,7 @@
 </div>
 
 <header class="main">
-  <div class="logo"><b>BIG</b><span>NEWS</span></div>
+  <div class="logo" onclick="goHome()" style="cursor:pointer" title="На головну"><b>BIG</b><span>NEWS</span></div>
   <button class="burger" id="burger" onclick="toggleMenu()">☰</button>
   <nav id="nav">
     <button class="active" data-cat="all">Всі</button>
@@ -360,7 +360,7 @@
 
 <script>
 let NEWS = [];
-let SITE_CFG = { topbar: 'BIGNEWS', breakingLabel: '🔴 LIVE', breakingText: '', heroTitle: 'Головне за день', heroId: null };
+let SITE_CFG = { topbar: 'BIGNEWS', breakingLabel: '🔴 LIVE', breakingText: '', heroTitle: 'Головне за день', heroId: null, sideIds: [] };
 
 fetch('news.json')
   .then(r => r.json())
@@ -441,7 +441,21 @@ function renderMain() {
   let hero = null;
   if (SITE_CFG.heroId) hero = NEWS.find(n => n.id === SITE_CFG.heroId) || null;
   if (!hero) hero = sorted[0];
-  const side = sorted.filter(n => n.id !== hero.id).slice(0, 4);
+  // Бокові статті: якщо в конфигу задані sideIds — беремо їх (до 5), інакше авто (перші 4 після hero)
+  let side = [];
+  if (Array.isArray(SITE_CFG.sideIds) && SITE_CFG.sideIds.length) {
+    const seen = new Set();
+    SITE_CFG.sideIds.forEach(id => {
+      const n = NEWS.find(x => x.id === id);
+      if (n && n.id !== hero.id && !seen.has(n.id)) { side.push(n); seen.add(n.id); }
+    });
+    // якщо заданих менше 5 — добираємо авто
+    const extra = sorted.filter(n => n.id !== hero.id && !seen.has(n.id));
+    side = side.concat(extra.slice(0, 5 - side.length));
+    side = side.slice(0, 5);
+  } else {
+    side = sorted.filter(n => n.id !== hero.id).slice(0, 4);
+  }
 
   const heroMins = (hero.id * 47 + 13) % 600;
   const heroImg = hero.img
@@ -511,6 +525,16 @@ function showHome() {
   document.getElementById('home-view').style.display = 'block';
   document.getElementById('article-view').style.display = 'none';
   window.scrollTo({ top: savedScroll, behavior: 'smooth' });
+}
+
+function goHome() {
+  currentCat = 'all';
+  currentPage = 1;
+  document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'));
+  document.querySelector('#nav button[data-cat="all"]').classList.add('active');
+  render();
+  showHome();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function openArticle(id) {
