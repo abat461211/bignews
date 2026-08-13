@@ -195,11 +195,19 @@
     </div>
     <div id="img-status" style="font-size:13px; margin-top:6px;"></div>
 
+    <label>Відео статті (необов'язково)</label>
+    <div class="hint">Встав посилання на YouTube (напр. <code>https://youtu.be/abcd123</code>), Vimeo, пряме MP4-відео або готовий iframe-код. Покажеться під фото, перед текстом.</div>
+    <input type="text" id="f-video" placeholder="https://youtu.be/... або iframe-код">
+
     <label>Повний текст статті</label>
     <div class="hint">Кожен абзац — з нового рядка. Рядок, що починається з ## — стає підзаголовком.<br>
-    Посилання: виділи текст і натисни «🔗 Посилання» (або впиши вручну: <code>[текст](https://адреса)</code>) — воно буде червоним.</div>
-    <div style="margin-bottom:6px">
+    Посилання: виділи текст і натисни «🔗 Посилання» (або впиши вручну: <code>[текст](https://адреса)</code>) — воно буде червоним.<br>
+    Відео в тексті: окремим рядком <code>## video: https://youtu.be/...</code><br>
+    Код/віджет у тексті: окремим рядком <code>## embed: &lt;iframe src="..."&gt;&lt;/iframe&gt;</code></div>
+    <div style="margin-bottom:6px; display:flex; gap:6px; flex-wrap:wrap;">
       <button class="ghost small" type="button" onclick="insertLink()">🔗 Посилання</button>
+      <button class="ghost small" type="button" onclick="insertVideo()">🎬 Відео</button>
+      <button class="ghost small" type="button" onclick="insertEmbed()">🧩 Код / віджет</button>
     </div>
     <textarea id="f-paragraphs" class="code" placeholder="Перший абзац...
 Другий абзац...
@@ -500,6 +508,7 @@ function newArticle() {
   $('f-paragraphs').value = '';
   $('f-quote').value = '';
   $('f-points').value = '';
+  $('f-video').value = '';
   $('save-status').textContent = '';
   $('img-status').textContent = '';
   $('f-file').value = '';
@@ -523,6 +532,7 @@ function editArticle(id) {
   $('f-paragraphs').value = (n.paragraphs || []).join('\n');
   $('f-quote').value = n.quote || '';
   $('f-points').value = (n.points || []).join('\n');
+  $('f-video').value = n.video || '';
   $('save-status').textContent = '';
   $('img-status').textContent = '';
   $('f-file').value = '';
@@ -542,6 +552,30 @@ function insertLink() {
   ta.value = ta.value.slice(0, start) + link + ta.value.slice(end);
   ta.focus();
   ta.selectionStart = ta.selectionEnd = start + link.length;
+}
+
+function insertVideo() {
+  const ta = $('f-paragraphs');
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  const url = prompt('Встав адресу відео (https://youtu.be/... або https://...mp4):', 'https://');
+  if (!url) return;
+  const line = '## video: ' + url;
+  const ins = (start > 0 && ta.value.charAt(start - 1) !== '\n' ? '\n' : '') + line + '\n';
+  ta.value = ta.value.slice(0, start) + ins + ta.value.slice(end);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = start + ins.length;
+}
+
+function insertEmbed() {
+  const ta = $('f-paragraphs');
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  const code = prompt('Встав HTML-код (напр. <iframe src="..."></iframe>):', '<iframe src="https://" width="100%" height="400"></iframe>');
+  if (!code) return;
+  const line = '## embed: ' + code;
+  const ins = (start > 0 && ta.value.charAt(start - 1) !== '\n' ? '\n' : '') + line + '\n';
+  ta.value = ta.value.slice(0, start) + ins + ta.value.slice(end);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = start + ins.length;
 }
 
 function closeForm() {
@@ -569,6 +603,8 @@ function collectForm() {
     color: color
   };
   if (currentImg) art.img = currentImg;
+  const videoVal = $('f-video').value.trim();
+  if (videoVal) art.video = videoVal; else delete art.video;
   return art;
 }
 
