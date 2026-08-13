@@ -514,23 +514,21 @@ function renderMain() {
     </div>`;
 }
 
-// ====== ЛІЧИЛЬНИК ПЕРЕГЛЯДІВ (localStorage) ======
+// ====== ЛІЧИЛЬНИК УНІКАЛЬНИХ ПЕРЕГЛЯДІВ (localStorage) ======
+// Один браузер = один унікальний перегляд на статтю. Повторні відкриття не накручують.
+const VIEWS_KEY = 'bignews_unique_views_v2';
+function viewsStore() {
+  try { return JSON.parse(localStorage.getItem(VIEWS_KEY) || '{}'); } catch (e) { return {}; }
+}
 function viewsGet(id) {
-  try {
-    const store = JSON.parse(localStorage.getItem('bignews_views') || '{}');
-    return store[id] || 0;
-  } catch (e) { return 0; }
+  const store = viewsStore();
+  return store[id] || 0;
 }
 function viewsInc(id) {
-  try {
-    const store = JSON.parse(localStorage.getItem('bignews_views') || '{}');
-    store[id] = (store[id] || 0) + 1;
-    localStorage.setItem('bignews_views', JSON.stringify(store));
-  } catch (e) {}
+  const store = viewsStore();
+  if (!store[id]) { store[id] = 1; try { localStorage.setItem(VIEWS_KEY, JSON.stringify(store)); } catch (e) {} }
 }
-function viewsCount(id) {
-  return (id * 137 + 500) + viewsGet(id);
-}
+function viewsCount(id) { return viewsGet(id); }
 
 function renderPagination(totalPages) {
   let bar = document.getElementById('pagination');
