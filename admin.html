@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BIGNEWS — адмінка</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #ffffff; --text: #1a1d24; --muted: #6b7280;
+    --accent: #e63946; --accent2: #1d3557; --border: #e5e7eb; --ok: #06d6a0; --err: #e63946;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--text); padding-bottom: 60px;
+  }
+  .topbar { background: var(--accent2); color: #fff; padding: 10px 16px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .topbar a { color: #fff; opacity: .85; text-decoration: none; }
+  .topbar a:hover { opacity: 1; }
+  .logo b { color: var(--accent); }
+  .container { max-width: 1000px; margin: 0 auto; padding: 20px 16px; }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  h2 { font-size: 16px; margin-bottom: 12px; color: var(--accent2); }
+  .hint { color: var(--muted); font-size: 13px; margin-bottom: 12px; line-height: 1.5; }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 10px 0 4px; }
+  input[type=text], input[type=url], input[type=password], select, textarea {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 14px; font-family: inherit; background: #fff; color: var(--text);
+  }
+  textarea { min-height: 90px; resize: vertical; }
+  textarea.code { font-family: monospace; min-height: 200px; font-size: 13px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > div { flex: 1; min-width: 140px; }
+  button {
+    background: var(--accent2); color: #fff; border: none; padding: 10px 18px; border-radius: 8px;
+    cursor: pointer; font-size: 14px; font-weight: 600; transition: opacity .2s;
+  }
+  button:hover { opacity: .85; }
+  button.primary { background: var(--accent); }
+  button.ghost { background: transparent; color: var(--accent2); border: 1px solid var(--border); font-weight: 500; }
+  button.small { padding: 5px 12px; font-size: 12px; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .article { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .article .info { flex: 1; min-width: 0; }
+  .article .title { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .article .meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .article .actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .cat-chip { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #fff; margin-right: 6px; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 12px 24px; border-radius: 10px; color: #fff; font-weight: 600; font-size: 14px; opacity: 0; transition: opacity .3s; z-index: 999; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .toast.ok { background: var(--ok); }
+  .toast.err { background: var(--err); }
+  .hidden { display: none !important; }
+  .step { background: #eef2f7; border: 1px dashed #b8c4d4; border-radius: 10px; padding: 14px; margin-top: 10px; font-size: 13px; line-height: 1.6; }
+  .step code { background: #fff; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border); font-size: 12px; }
+  #status { font-size: 13px; margin-top: 8px; }
+  .ok-text { color: var(--ok); font-weight: 600; }
+  .err-text { color: var(--err); font-weight: 600; }
+  .loading { opacity: .6; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span><a href="./">← На сайт</a></span>
+  <span class="logo"><b>BIG</b>NEWS — адмінка</span>
+  <span id="conn-status" style="font-size:12px">не підключено</span>
+</div>
+
+<div class="container">
+
+  <!-- КРОК 1: токен -->
+  <div class="panel" id="panel-token">
+    <h1>🔑 Підключення до GitHub</h1>
+    <div class="hint">
+      Адмінка зберігає статті прямо у твоєму репозиторії на GitHub. Для цього потрібен
+      персональний токен. Створи його один раз (2 хвилини):
+    </div>
+    <div class="step">
+      <b>Як створити токен:</b><br><br>
+      1. Відкрий <code>github.com/settings/tokens/new</code> (ти вже залогінений)<br>
+      2. У полі <b>Note</b> напиши: <code>bignews admin</code><br>
+      3. <b>Expiration</b> — обери термін (наприклад, 90 днів або No expiration)<br>
+      4. Познач галочку <b>repo</b> (повний доступ до репозиторіїв)<br>
+      5. Натисни <b>Generate token</b> внизу сторінки<br>
+      6. Скопіюй токен (він показується тільки один раз!) і встав його нижче
+    </div>
+    <label>Токен GitHub (зберігається тільки у твоєму браузері)</label>
+    <input type="password" id="token" placeholder="ghp_...">
+    <div style="margin-top:12px; display:flex; gap:8px; align-items:center;">
+      <button class="primary" onclick="connect()">Підключити</button>
+      <span id="status"></span>
+    </div>
+  </div>
+
+  <!-- КРОК 2: редактор -->
+  <div class="panel hidden" id="panel-editor">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+      <h2>📰 Статті (<span id="count">0</span>)</h2>
+      <button class="primary" onclick="newArticle()">+ Нова стаття</button>
+    </div>
+    <div class="hint" style="margin-top:8px">
+      Натисни на статтю, щоб редагувати. Після змін — «Зберегти на сайт».
+      Оновлення з'явиться на сайті протягом 1–2 хвилин.
+    </div>
+    <div id="list"></div>
+  </div>
+
+  <!-- КРОК 3: форма статті -->
+  <div class="panel hidden" id="panel-form">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+      <h2 id="form-title">Нова стаття</h2>
+      <button class="ghost" onclick="closeForm()">← Назад до списку</button>
+    </div>
+
+    <label>Заголовок</label>
+    <input type="text" id="f-title" placeholder="Заголовок статті">
+
+    <label>Анонс (короткий опис на головній — 1-2 речення)</label>
+    <textarea id="f-text" placeholder="Короткий анонс, що бачать на головній сторінці"></textarea>
+
+    <div class="row">
+      <div>
+        <label>Категорія</label>
+        <select id="f-cat">
+          <option value="ukr">Україна</option>
+          <option value="world">Світ</option>
+          <option value="tech">Техно</option>
+          <option value="econ">Економіка</option>
+          <option value="science">Наука</option>
+          <option value="sport">Спорт</option>
+        </select>
+      </div>
+      <div>
+        <label>Емодзі (іконка картки)</label>
+        <input type="text" id="f-emoji" placeholder="🤖">
+      </div>
+      <div>
+        <label>Колір (формат #rrggbb)</label>
+        <input type="text" id="f-color" placeholder="#3a86ff">
+      </div>
+    </div>
+
+    <label>Повний текст статті</label>
+    <div class="hint">Кожен абзац — з нового рядка. Рядок, що починається з ## — стає підзаголовком.</div>
+    <textarea id="f-paragraphs" class="code" placeholder="Перший абзац...
+Другий абзац...
+## Підзаголовок
+Третій абзац..."></textarea>
+
+    <label>Цитата (виділяється в статті)</label>
+    <input type="text" id="f-quote" placeholder="Коротка цитата зі статті">
+
+    <label>Ключове в цифрах (кожен пункт з нового рядка)</label>
+    <textarea id="f-points" placeholder="Пункт 1
+Пункт 2
+Пункт 3"></textarea>
+
+    <div style="margin-top:16px; display:flex; gap:8px; align-items:center;">
+      <button class="primary" onclick="saveArticle()">💾 Зберегти на сайт</button>
+      <button class="ghost" onclick="closeForm()">Скасувати</button>
+      <span id="save-status"></span>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const REPO = 'abat461211/bignews';
+const FILE = 'news.json';
+const BRANCH = 'main';
+const CATS = { ukr: 'Україна', world: 'Світ', tech: 'Техно', econ: 'Економіка', science: 'Наука', sport: 'Спорт' };
+const CAT_COLORS = { ukr: '#1d9bf0', world: '#ff9e00', tech: '#3a86ff', econ: '#06d6a0', science: '#9b5de5', sport: '#ef476f' };
+
+let TOKEN = localStorage.getItem('bignews_token') || '';
+let NEWS = [];
+let currentId = null;
+let fileSha = null;
+
+function $(id) { return document.getElementById(id); }
+function toast(msg, ok) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (ok ? 'ok' : 'err');
+  setTimeout(() => t.className = 'toast', 3500);
+}
+
+// ---------- GitHub API ----------
+async function gh(path, opts = {}) {
+  const res = await fetch('https://api.github.com' + path, {
+    method: opts.method || 'GET',
+    headers: {
+      'Authorization': 'token ' + TOKEN,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      ...(opts.body ? { 'Content-Type': 'application/json' } : {})
+    },
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || ('HTTP ' + res.status));
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+async function loadNewsFile() {
+  const data = await gh(`/repos/${REPO}/contents/${FILE}?ref=${BRANCH}`);
+  fileSha = data.sha;
+  const b64 = data.content.replace(/\n/g, '');
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const text = new TextDecoder('utf-8').decode(bytes);
+  return JSON.parse(text);
+}
+
+async function saveNewsFile() {
+  const enc = new TextEncoder();
+  const bytes = enc.encode(JSON.stringify(NEWS, null, 2));
+  let bin = '';
+  bytes.forEach(b => bin += String.fromCharCode(b));
+  const content = btoa(bin);
+  const body = {
+    message: 'BIGNEWS: оновлено статті з адмінки',
+    content: content,
+    branch: BRANCH
+  };
+  if (fileSha) body.sha = fileSha;
+  const res = await gh(`/repos/${REPO}/contents/${FILE}`, { method: 'PUT', body });
+  fileSha = res.content.sha;
+}
+
+// ---------- Підключення ----------
+async function connect() {
+  TOKEN = $('token').value.trim();
+  if (!TOKEN) { toast('Встав токен', false); return; }
+  const st = $('status');
+  st.textContent = 'Перевіряю...';
+  try {
+    const user = await gh('/user');
+    const repo = await gh(`/repos/${REPO}`);
+    if (repo.permissions && repo.permissions.push === false) {
+      throw new Error('Токен не має прав на запис у репозиторій (потрібна галочка repo)');
+    }
+    localStorage.setItem('bignews_token', TOKEN);
+    $('conn-status').textContent = '✓ ' + user.login;
+    $('conn-status').style.color = '#06d6a0';
+    st.textContent = '';
+    $('panel-token').classList.add('hidden');
+    $('panel-editor').classList.remove('hidden');
+    await refreshList();
+    toast('Підключено: ' + user.login, true);
+  } catch (e) {
+    st.innerHTML = '<span class="err-text">Помилка: ' + e.message + '</span>';
+  }
+}
+
+// ---------- Список статей ----------
+async function refreshList() {
+  try {
+    NEWS = await loadNewsFile();
+  } catch (e) {
+    toast('Не вдалося завантажити статті: ' + e.message, false);
+    return;
+  }
+  $('count').textContent = NEWS.length;
+  const list = $('list');
+  list.innerHTML = NEWS.map(n => `
+    <div class="article">
+      <div class="info" style="cursor:pointer" onclick="editArticle(${n.id})">
+        <div class="title">${n.emoji || '📰'} ${escapeHtml(n.title)}</div>
+        <div class="meta">
+          <span class="cat-chip" style="background:${CAT_COLORS[n.cat] || '#888'}">${CATS[n.cat] || n.cat}</span>
+          id: ${n.id}
+        </div>
+      </div>
+      <div class="actions">
+        <button class="small ghost" onclick="editArticle(${n.id})">✏️</button>
+        <button class="small ghost" onclick="deleteArticle(${n.id})">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ---------- Форма ----------
+function newArticle() {
+  currentId = null;
+  $('form-title').textContent = 'Нова стаття';
+  $('f-title').value = '';
+  $('f-text').value = '';
+  $('f-cat').value = 'ukr';
+  $('f-emoji').value = '📰';
+  $('f-color').value = '#3a86ff';
+  $('f-paragraphs').value = '';
+  $('f-quote').value = '';
+  $('f-points').value = '';
+  $('save-status').textContent = '';
+  $('panel-editor').classList.add('hidden');
+  $('panel-form').classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function editArticle(id) {
+  const n = NEWS.find(x => x.id === id);
+  if (!n) return;
+  currentId = id;
+  $('form-title').textContent = 'Редагування: ' + n.title;
+  $('f-title').value = n.title;
+  $('f-text').value = n.text || '';
+  $('f-cat').value = n.cat || 'ukr';
+  $('f-emoji').value = n.emoji || '';
+  $('f-color').value = n.color || '#3a86ff';
+  $('f-paragraphs').value = (n.paragraphs || []).join('\n');
+  $('f-quote').value = n.quote || '';
+  $('f-points').value = (n.points || []).join('\n');
+  $('save-status').textContent = '';
+  $('panel-editor').classList.add('hidden');
+  $('panel-form').classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function closeForm() {
+  $('panel-form').classList.add('hidden');
+  $('panel-editor').classList.remove('hidden');
+  refreshList();
+}
+
+function collectForm() {
+  const title = $('f-title').value.trim();
+  const text = $('f-text').value.trim();
+  if (!title) { toast('Заголовок обов\'язковий', false); return null; }
+  const paragraphs = $('f-paragraphs').value.split('\n').map(s => s.trim()).filter(s => s);
+  const points = $('f-points').value.split('\n').map(s => s.trim()).filter(s => s);
+  const color = /^#[0-9a-fA-F]{6}$/.test($('f-color').value.trim()) ? $('f-color').value.trim() : '#3a86ff';
+  const art = {
+    id: currentId !== null ? currentId : (NEWS.reduce((m, x) => Math.max(m, x.id), 0) + 1),
+    cat: $('f-cat').value,
+    title: title,
+    text: text,
+    paragraphs: paragraphs,
+    quote: $('f-quote').value.trim(),
+    points: points,
+    emoji: $('f-emoji').value.trim() || '📰',
+    color: color
+  };
+  return art;
+}
+
+async function saveArticle() {
+  const art = collectForm();
+  if (!art) return;
+  const st = $('save-status');
+  st.textContent = 'Зберігаю...';
+  try {
+    if (currentId !== null) {
+      const idx = NEWS.findIndex(x => x.id === currentId);
+      NEWS[idx] = art;
+    } else {
+      NEWS.push(art);
+    }
+    await saveNewsFile();
+    st.innerHTML = '<span class="ok-text">✓ Збережено!</span>';
+    toast('Стаття опублікована! Оновиться на сайті за 1-2 хв.', true);
+    setTimeout(closeForm, 1200);
+  } catch (e) {
+    st.innerHTML = '<span class="err-text">Помилка: ' + e.message + '</span>';
+    toast('Помилка збереження: ' + e.message, false);
+  }
+}
+
+async function deleteArticle(id) {
+  if (!confirm('Видалити цю статтю?')) return;
+  const n = NEWS.find(x => x.id === id);
+  try {
+    NEWS = NEWS.filter(x => x.id !== id);
+    await saveNewsFile();
+    toast('Статтю видалено', true);
+    refreshList();
+  } catch (e) {
+    NEWS = NEWS.concat([n]); // відкотити
+    toast('Помилка: ' + e.message, false);
+  }
+}
+
+// ---------- Старт ----------
+if (TOKEN) {
+  $('token').value = TOKEN;
+  connect();
+}
+</script>
+</body>
+</html>

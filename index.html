@@ -383,7 +383,13 @@
   Усі матеріали — демонстраційний контент для показу верстки. © 2026
 </footer>
 
-<script src="news.js"></script>
+<script>
+let NEWS = [];
+fetch('news.json')
+  .then(r => r.json())
+  .then(data => { NEWS = data; render(); })
+  .catch(() => { document.getElementById('grid').innerHTML = '<p style="padding:20px">Не вдалося завантажити новини.</p>'; });
+</script>
 <script>
 
 
@@ -518,8 +524,6 @@ function toggleTheme() {
   document.querySelector('.topbar button').textContent =
     body.dataset.theme === 'light' ? '🌙 Темна' : '☀️ Світла';
 }
-
-render();
 </script>
 </body>
 </html>
