@@ -39,6 +39,10 @@
     align-items: center;
   }
   .topbar span { opacity: .85; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .topbar span a { color: #ffd166; font-weight: 700; text-decoration: underline; }
+  .topbar span a:hover { opacity: .8; }
+  .breaking span a { color: #fff; font-weight: 700; text-decoration: underline; }
+  .breaking span a:hover { opacity: .8; }
   .topbar button {
     background: rgba(255,255,255,.15);
     color: #fff;
@@ -380,11 +384,11 @@ fetch('config.json')
   .then(r => r.json())
   .then(cfg => {
     SITE_CFG = Object.assign({}, SITE_CFG, cfg);
-    document.getElementById('topbar-text').textContent = SITE_CFG.topbar || 'BIGNEWS';
+    document.getElementById('topbar-text').innerHTML = linkify(SITE_CFG.topbar || 'BIGNEWS');
     const br = document.getElementById('breaking');
     if (SITE_CFG.breakingText) {
       document.getElementById('breaking-label').textContent = SITE_CFG.breakingLabel || '🔴 LIVE';
-      document.getElementById('breaking-text').textContent = SITE_CFG.breakingText;
+      document.getElementById('breaking-text').innerHTML = linkify(SITE_CFG.breakingText);
       br.style.display = '';
     }
     renderMain();
