@@ -231,6 +231,9 @@
   .article-img { width: 100%; height: auto; border-radius: 10px; margin: 4px 0 20px; display: block; }
   .article-body ul { padding-left: 22px; margin: 12px 0 16px; line-height: 1.7; font-size: 16px; }
   .article-body .emoji-lg { font-size: 56px; text-align: center; margin: 16px 0; }
+  .article-body a, .card a { color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--accent); }
+  .article-body a:hover, .card a:hover { opacity: .8; }
+  .article-body a:visited, .card a:visited { color: var(--accent); }
   .related-title { font-size: 18px; font-weight: 800; margin: 28px 0 14px; }
   .related-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
 
@@ -404,6 +407,14 @@ function timeAgo(min) {
   return min < 60 ? `${min} хв тому` : `${Math.floor(min/60)} год ${min%60 ? min%60 + ' хв' : ''} тому`;
 }
 
+function linkify(s) {
+  // 1) [текст](https://url) — явне посилання з текстом
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  // 2) голі URL — обгортаємо в посилання (не чіпаємо вже згенеровані <a href="...")
+  s = s.replace(/(^|[\s>])(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+  return s;
+}
+
 function cardHTML(n, i) {
   const mins = (i * 47 + 13) % 600;
   const thumbHtml = n.img
@@ -415,7 +426,7 @@ function cardHTML(n, i) {
     <div class="body">
       <div class="cat ${CAT_CLASS[n.cat]}">${CATS[n.cat]}</div>
       <h3>${n.title}</h3>
-      <p>${n.text}</p>
+      <p>${linkify(n.text)}</p>
       <div class="meta">🕒 ${timeAgo(mins)} • 👁 ${(n.id * 137 + 500).toLocaleString('uk-UA')} читань</div>
     </div>
   </div>`;
@@ -474,8 +485,8 @@ function openArticle(id) {
 
   const imgBlock = n.img ? `<img src="${n.img}" alt="${n.title}" class="article-img">` : '';
   const bodyHtml = n.paragraphs.map(p => p.startsWith('## ')
-    ? `<h2>${p.slice(3)}</h2>`
-    : `<p>${p}</p>`).join('');
+    ? `<h2>${linkify(p.slice(3))}</h2>`
+    : `<p>${linkify(p)}</p>`).join('');
 
   document.getElementById('article-content').innerHTML = `
     <div class="article-hero" style="background:linear-gradient(135deg, ${n.color}, ${n.color}cc)">

@@ -154,7 +154,11 @@
     <div id="img-status" style="font-size:13px; margin-top:6px;"></div>
 
     <label>Повний текст статті</label>
-    <div class="hint">Кожен абзац — з нового рядка. Рядок, що починається з ## — стає підзаголовком.</div>
+    <div class="hint">Кожен абзац — з нового рядка. Рядок, що починається з ## — стає підзаголовком.<br>
+    Посилання: виділи текст і натисни «🔗 Посилання» (або впиши вручну: <code>[текст](https://адреса)</code>) — воно буде червоним.</div>
+    <div style="margin-bottom:6px">
+      <button class="ghost small" type="button" onclick="insertLink()">🔗 Посилання</button>
+    </div>
     <textarea id="f-paragraphs" class="code" placeholder="Перший абзац...
 Другий абзац...
 ## Підзаголовок
@@ -394,6 +398,18 @@ function editArticle(id) {
   $('panel-editor').classList.add('hidden');
   $('panel-form').classList.remove('hidden');
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function insertLink() {
+  const ta = $('f-paragraphs');
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  const selected = ta.value.slice(start, end).trim() || 'текст посилання';
+  const url = prompt('Встав адресу посилання (https://...):', 'https://');
+  if (!url) return;
+  const link = '[' + selected + '](' + url + ')';
+  ta.value = ta.value.slice(0, start) + link + ta.value.slice(end);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = start + link.length;
 }
 
 function closeForm() {
