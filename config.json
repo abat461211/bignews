@@ -1,8 +1,14 @@
 {
   "topbar": "BIGNEWS • оновлено щойно • четвер, 13 серпня 2026",
   "breakingLabel": "🔴 LIVE",
-  "breakingText": "Інші новини компанії",
+  "breakingText": "Інші новини компаніїhttps://newsyou.info/",
   "heroTitle": "Головне за день",
   "heroId": 14,
-  "sideIds": []
+  "sideIds": [
+    null,
+    null,
+    null,
+    null,
+    null
+  ]
 }
